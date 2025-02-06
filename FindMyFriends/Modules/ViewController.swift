@@ -26,7 +26,7 @@ final class ViewController: UIViewController {
         return tableView
     }()
     
-    private lazy var dataSource = UITableViewDiffableDataSource<Section, User>(tableView: allUsersTableView)
+    private lazy var allUsersDataSource = UITableViewDiffableDataSource<Section, User>(tableView: allUsersTableView)
     { [weak self] tableView, indexPath, itemIdentifier in
         guard
             let self,
@@ -37,6 +37,26 @@ final class ViewController: UIViewController {
         cell.configureWith(user: itemIdentifier)
         return cell
     }
+    
+    private lazy var pinnedView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .red
+        return view
+    }()
+    
+    private lazy var infoLabel: UILabel = {
+        let label = UILabel()
+        label.textAlignment = .center
+        label.font = .preferredFont(forTextStyle: .body)
+        label.textColor = .label
+        label.text = "Tap up to three friends in the list to pin them to the top. Or pin one to see distance relatively to other friends."
+        label.numberOfLines = 0
+        return label
+    }()
+    
+    private lazy var pinnedViewHeightConstraint: NSLayoutConstraint = {
+        pinnedView.heightAnchor.constraint(equalToConstant: 80)
+    }()
     
     init(viewModel: ViewModel) {
         self.viewModel = viewModel
@@ -65,16 +85,21 @@ private extension ViewController {
     
     func addSubviews() {
         [activityIndicator,
+         pinnedView,
          allUsersTableView]
             .forEach { subview in
                 view.addSubview(subview)
                 subview.translatesAutoresizingMaskIntoConstraints = false
             }
         
+        pinnedView.addSubview(infoLabel)
+        infoLabel.translatesAutoresizingMaskIntoConstraints = false
     }
     
     func setupSubviews() {
         view.backgroundColor = .systemGray6
+        
+        pinnedView.isHidden = true
         
         allUsersTableView.isHidden = true
         allUsersTableView.rowHeight = 100
@@ -85,10 +110,20 @@ private extension ViewController {
     
     func makeConstraints() {
         NSLayoutConstraint.activate([
+            pinnedView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            pinnedView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            pinnedView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            pinnedViewHeightConstraint,
+            
+            infoLabel.topAnchor.constraint(equalTo: pinnedView.topAnchor),
+            infoLabel.bottomAnchor.constraint(equalTo: pinnedView.bottomAnchor),
+            infoLabel.leadingAnchor.constraint(equalTo: pinnedView.leadingAnchor),
+            infoLabel.trailingAnchor.constraint(equalTo: pinnedView.trailingAnchor),
+            
             activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             
-            allUsersTableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            allUsersTableView.topAnchor.constraint(equalTo: pinnedView.bottomAnchor),
             allUsersTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
             allUsersTableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             allUsersTableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
@@ -103,6 +138,7 @@ private extension ViewController {
             .sink { [weak self] users in
                 self?.activityIndicator.stopAnimating()
                 self?.allUsersTableView.isHidden = false
+                self?.pinnedView.isHidden = false
                 self?.displayUsers(users)
             }
             .store(in: &cancellables)
@@ -111,16 +147,16 @@ private extension ViewController {
     func makeAllUsersDataSource() {
         var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
         snapshot.appendSections([.main])
-        dataSource.apply(snapshot)
+        allUsersDataSource.apply(snapshot)
         
-        allUsersTableView.dataSource = dataSource
+        allUsersTableView.dataSource = allUsersDataSource
     }
     
     func displayUsers(_ users: [User]) {
         var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
         snapshot.appendSections([.main])
         snapshot.appendItems(users, toSection: .main)
-        dataSource.apply(snapshot)
+        allUsersDataSource.apply(snapshot)
     }
     
 }
@@ -130,9 +166,26 @@ extension ViewController: UITableViewDelegate {
         guard
             let count = tableView.indexPathsForSelectedRows?.count,
             count > 3
-        else { return }
+        else {
+            pinnedViewHeightConstraint.constant = 200
+            UIView.animate(withDuration: 0.3) {
+                self.view.layoutIfNeeded()
+            }
+            // сохранить пины в vm
+            return
+        }
         
         tableView.deselectRow(at: indexPath, animated: true)
+    }
+    
+    func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
+        let count = tableView.indexPathsForSelectedRows?.count ?? 0
+        if count == 0 {
+            pinnedViewHeightConstraint.constant = 80
+            UIView.animate(withDuration: 0.3) {
+                self.view.layoutIfNeeded()
+            }
+        }
     }
 }
 
