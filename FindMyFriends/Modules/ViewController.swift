@@ -9,6 +9,7 @@ import UIKit
 import Combine
 
 final class ViewController: UIViewController {
+    private let viewModel: ViewModel
     private var cancellables: Set<AnyCancellable> = []
     
     private lazy var activityIndicator: UIActivityIndicatorView = {
@@ -18,7 +19,24 @@ final class ViewController: UIViewController {
         return activityIndicator
     }()
     
-    private let viewModel: ViewModel
+    private lazy var allUsersTableView: UITableView = {
+        let tableView = UITableView()
+        tableView.register(UserCell.self, forCellReuseIdentifier: UserCell.identifier)
+        tableView.delegate = self
+        return tableView
+    }()
+    
+    private lazy var dataSource = UITableViewDiffableDataSource<Section, User>(tableView: allUsersTableView)
+    { [weak self] tableView, indexPath, itemIdentifier in
+        guard
+            let self,
+            let cell = allUsersTableView.dequeueReusableCell(withIdentifier: UserCell.identifier, for: indexPath)
+                as? UserCell
+        else { return UITableViewCell() }
+        
+        cell.configureWith(user: itemIdentifier)
+        return cell
+    }
     
     init(viewModel: ViewModel) {
         self.viewModel = viewModel
@@ -46,20 +64,35 @@ private extension ViewController {
     }
     
     func addSubviews() {
-        [activityIndicator].forEach { subview in
-            view.addSubview(subview)
-            subview.translatesAutoresizingMaskIntoConstraints = false
-        }
+        [activityIndicator,
+         allUsersTableView]
+            .forEach { subview in
+                view.addSubview(subview)
+                subview.translatesAutoresizingMaskIntoConstraints = false
+            }
         
     }
     
     func setupSubviews() {
         view.backgroundColor = .systemGray6
+        
+        allUsersTableView.isHidden = true
+        allUsersTableView.rowHeight = 100
+        allUsersTableView.backgroundColor = .systemGray6
+        allUsersTableView.separatorStyle = .none
+        allUsersTableView.allowsMultipleSelection = true
     }
     
     func makeConstraints() {
-        activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor).isActive = true
-        activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
+        NSLayoutConstraint.activate([
+            activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            
+            allUsersTableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            allUsersTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            allUsersTableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            allUsersTableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+        ])
     }
     
     func bind() {
@@ -67,11 +100,42 @@ private extension ViewController {
         
         viewModel.usersPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] in
-                print($0)
+            .sink { [weak self] users in
                 self?.activityIndicator.stopAnimating()
+                self?.allUsersTableView.isHidden = false
+                self?.displayUsers(users)
             }
             .store(in: &cancellables)
     }
+    
+    func makeAllUsersDataSource() {
+        var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
+        snapshot.appendSections([.main])
+        dataSource.apply(snapshot)
+        
+        allUsersTableView.dataSource = dataSource
+    }
+    
+    func displayUsers(_ users: [User]) {
+        var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
+        snapshot.appendSections([.main])
+        snapshot.appendItems(users, toSection: .main)
+        dataSource.apply(snapshot)
+    }
+    
 }
 
+extension ViewController: UITableViewDelegate {
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        guard
+            let count = tableView.indexPathsForSelectedRows?.count,
+            count > 3
+        else { return }
+        
+        tableView.deselectRow(at: indexPath, animated: true)
+    }
+}
+
+enum Section: String {
+    case main
+}
