@@ -6,8 +6,10 @@
 //
 
 import UIKit
+import Combine
 
 final class ViewController: UIViewController {
+    private var cancellables: Set<AnyCancellable> = []
     
     private lazy var activityIndicator: UIActivityIndicatorView = {
         let activityIndicator = UIActivityIndicatorView(style: .large)
@@ -31,6 +33,7 @@ final class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setup()
+        bind()
     }
 }
 
@@ -59,5 +62,16 @@ private extension ViewController {
         activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor).isActive = true
     }
     
+    func bind() {
+        viewModel.viewDidLoad()
+        
+        viewModel.usersPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                print($0)
+                self?.activityIndicator.stopAnimating()
+            }
+            .store(in: &cancellables)
+    }
 }
 
