@@ -38,9 +38,29 @@ final class ViewController: UIViewController {
         return cell
     }
     
+    private lazy var pinnedUsersTableView: UITableView = {
+        let tableView = UITableView()
+        tableView.register(UserCell.self, forCellReuseIdentifier: UserCell.identifier)
+        tableView.delegate = self
+        tableView.rowHeight = UITableView.automaticDimension
+        return tableView
+    }()
+    
+    private lazy var pinnedUsersDataSource = UITableViewDiffableDataSource<Section, User>(tableView: allUsersTableView)
+    { [weak self] tableView, indexPath, itemIdentifier in
+        guard
+            let self,
+            let cell = allUsersTableView.dequeueReusableCell(withIdentifier: UserCell.identifier, for: indexPath)
+                as? UserCell
+        else { return UITableViewCell() }
+        
+        cell.configureWith(user: itemIdentifier)
+        return cell
+    }
+    
     private lazy var pinnedView: UIView = {
         let view = UIView()
-        view.backgroundColor = .red
+        view.layer.cornerRadius = 20
         return view
     }()
     
@@ -92,8 +112,12 @@ private extension ViewController {
                 subview.translatesAutoresizingMaskIntoConstraints = false
             }
         
-        pinnedView.addSubview(infoLabel)
-        infoLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        [infoLabel,
+         pinnedUsersTableView].forEach { subview in
+            pinnedView.addSubview(subview)
+            subview.translatesAutoresizingMaskIntoConstraints = false
+        }
     }
     
     func setupSubviews() {
@@ -106,6 +130,9 @@ private extension ViewController {
         allUsersTableView.backgroundColor = .systemGray6
         allUsersTableView.separatorStyle = .none
         allUsersTableView.allowsMultipleSelection = true
+        
+        pinnedUsersTableView.isHidden = true
+        pinnedUsersTableView.layer.cornerRadius = 20
     }
     
     func makeConstraints() {
@@ -119,6 +146,11 @@ private extension ViewController {
             infoLabel.bottomAnchor.constraint(equalTo: pinnedView.bottomAnchor),
             infoLabel.leadingAnchor.constraint(equalTo: pinnedView.leadingAnchor),
             infoLabel.trailingAnchor.constraint(equalTo: pinnedView.trailingAnchor),
+            
+            pinnedUsersTableView.topAnchor.constraint(equalTo: pinnedView.topAnchor),
+            pinnedUsersTableView.leadingAnchor.constraint(equalTo: pinnedView.leadingAnchor),
+            pinnedUsersTableView.trailingAnchor.constraint(equalTo: pinnedView.trailingAnchor),
+            pinnedUsersTableView.bottomAnchor.constraint(equalTo: pinnedView.bottomAnchor),
             
             activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor),
@@ -168,6 +200,7 @@ extension ViewController: UITableViewDelegate {
             count > 3
         else {
             pinnedViewHeightConstraint.constant = 200
+            pinnedUsersTableView.isHidden = false
             UIView.animate(withDuration: 0.3) {
                 self.view.layoutIfNeeded()
             }
@@ -182,6 +215,7 @@ extension ViewController: UITableViewDelegate {
         let count = tableView.indexPathsForSelectedRows?.count ?? 0
         if count == 0 {
             pinnedViewHeightConstraint.constant = 80
+            pinnedUsersTableView.isHidden = true
             UIView.animate(withDuration: 0.3) {
                 self.view.layoutIfNeeded()
             }
