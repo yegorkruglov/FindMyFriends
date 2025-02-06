@@ -20,11 +20,15 @@ final class UserCell: UITableViewCell {
         label.font = .preferredFont(forTextStyle: .headline)
         return label
     }()
+    private lazy var pinImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setup()
-        
     }
     
     @available(*, unavailable)
@@ -34,6 +38,12 @@ final class UserCell: UITableViewCell {
     
     func configureWith(user: User) {
         nameLabel.text = user.name
+    }
+    
+    func configureSelected(_ bool: Bool) {
+        pinImageView.image = bool
+        ? UIImage(systemName: "pin.slash")
+        : nil
     }
     
     override func prepareForReuse() {
@@ -46,7 +56,8 @@ final class UserCell: UITableViewCell {
         backgrndView.layer.cornerRadius = 20
         
         [backgrndView,
-         nameLabel]
+         nameLabel,
+         pinImageView]
             .forEach { subview in
                 contentView.addSubview(subview)
                 subview.translatesAutoresizingMaskIntoConstraints = false
@@ -61,7 +72,11 @@ final class UserCell: UITableViewCell {
             nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
             nameLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
             nameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            nameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+            nameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            
+            pinImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            pinImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+            pinImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
         ])
     }
 }
