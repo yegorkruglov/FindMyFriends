@@ -24,7 +24,6 @@ class ViewModel {
     private var cancellables: Set<AnyCancellable> = []
     private lazy var usersPublisher = CurrentValueSubject<[User], Never>([])
     private lazy var userUpdatePublisher = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
-
     
     // MARK: - private properties
     
@@ -88,6 +87,16 @@ private extension ViewModel {
             .store(in: &cancellables)
     }
     
+    func handleUserUpdatePublisher() {
+        userUpdatePublisher
+            .sink { [weak self] _ in
+                guard let self else { return }
+                let newUsers = generateUsers(.fromUsersOld(oldUsers: usersPublisher.value))
+                usersPublisher.send(newUsers)
+            }
+            .store(in: &cancellables)
+    }
+    
     func generateUsers(_ type: LocationType) -> [User] {
         
         let users: [User]
@@ -99,6 +108,7 @@ private extension ViewModel {
             delta = 0.5
             users = names.map { name in
                 User(
+                    id: UUID(),
                     name: name,
                     location: generateRandomLocationRelativeTo(userLocation, withDelta: delta)
                 )
@@ -108,6 +118,7 @@ private extension ViewModel {
             delta = 0.01
             users = oldUsers.map { oldUser in
                 User(
+                    id: oldUser.id,
                     name: oldUser.name,
                     location: generateRandomLocationRelativeTo(
                         oldUser.location,
@@ -131,17 +142,6 @@ private extension ViewModel {
         let newRandomLongitude = Double.random(in: longMin...longMax)
         
         return CLLocation(latitude: newRandomLatitude, longitude: newRandomLongitude)
-    }
-    
-    func handleUserUpdatePublisher() {
-        userUpdatePublisher
-            .sink { [weak self] _ in
-                guard let self else { return }
-                let newUsers = generateUsers(.fromUsersOld(oldUsers: usersPublisher.value))
-                print(newUsers.first?.location.coordinate)
-                usersPublisher.send(newUsers)
-            }
-            .store(in: &cancellables)
     }
 }
 

@@ -30,7 +30,7 @@ final class UserCell: UITableViewCell {
     private lazy var infoLabel: UILabel = {
         let label = UILabel()
         label.font = .preferredFont(forTextStyle: .caption1)
-        label.text = "Distance from you: 100km"
+        label.text = "Distance from you: unknown"
         return label
     }()
     private lazy var pinImageView: UIImageView = {
@@ -51,6 +51,7 @@ final class UserCell: UITableViewCell {
     
     func configureWith(user: User) {
         nameLabel.text = user.name
+        infoLabel.text = String(user.location.coordinate.latitude + user.location.coordinate.longitude)
     }
     
     func configureSelected(_ bool: Bool) {

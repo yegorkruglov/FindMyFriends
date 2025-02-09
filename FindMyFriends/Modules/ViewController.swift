@@ -190,7 +190,7 @@ private extension ViewController {
         var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
         snapshot.appendSections([.main])
         snapshot.appendItems([], toSection: .main)
-        pinnedUsersDataSource.apply(snapshot)
+        allUsersDataSource.apply(snapshot)
         print(snapshot.sectionIdentifiers)
     }
     
@@ -223,10 +223,12 @@ private extension ViewController {
     }
     
     func displayAllUsers(_ users: [User]) {
+        
         var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
         snapshot.appendSections([.main])
         snapshot.appendItems(users, toSection: .main)
-        allUsersDataSource.apply(snapshot)
+        
+        allUsersDataSource.applySnapshotUsingReloadData(snapshot)
     }
     
     func shoudDisplayPinned(_ bool: Bool) {
@@ -246,32 +248,31 @@ extension ViewController: UITableViewDelegate {
         
         guard
             let count = tableView.indexPathsForSelectedRows?.count,
-            count > 3
+            count <= 3
         else {
-            if let user = allUsersDataSource.itemIdentifier(for: indexPath) {
-                var snapshot = pinnedUsersDataSource.snapshot()
-                snapshot.appendItems([user], toSection: .main)
-                pinnedUsersDataSource.apply(snapshot)
-            }
-            
-            if let cell = tableView.cellForRow(at: indexPath) as? UserCell {
-                cell.configureSelected(true)
-            }
-            
-            if allUsersTableView.indexPathsForSelectedRows?.count == 1,
-               let selectedIndexPath = allUsersTableView.indexPathsForSelectedRows?.first,
-               let selectedUser = allUsersDataSource.itemIdentifier(for: selectedIndexPath) {
-                selectedUserPublisher.send(selectedUser)
-            } else {
-                selectedUserPublisher.send(nil)
-            }
-            
-            shoudDisplayPinned(true)
-            
+            tableView.deselectRow(at: indexPath, animated: true)
             return
         }
         
-        tableView.deselectRow(at: indexPath, animated: true)
+        if let user = allUsersDataSource.itemIdentifier(for: indexPath) {
+            var snapshot = pinnedUsersDataSource.snapshot()
+            snapshot.appendItems([user], toSection: .main)
+            pinnedUsersDataSource.apply(snapshot)
+        }
+        
+        if let cell = tableView.cellForRow(at: indexPath) as? UserCell {
+            cell.configureSelected(true)
+        }
+        
+        if allUsersTableView.indexPathsForSelectedRows?.count == 1,
+           let selectedIndexPath = allUsersTableView.indexPathsForSelectedRows?.first,
+           let selectedUser = allUsersDataSource.itemIdentifier(for: selectedIndexPath) {
+            selectedUserPublisher.send(selectedUser)
+        } else {
+            selectedUserPublisher.send(nil)
+        }
+        
+        shoudDisplayPinned(true)
     }
     
     func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
