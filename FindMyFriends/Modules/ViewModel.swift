@@ -12,18 +12,19 @@ import CoreLocation
 class ViewModel {
     
     struct Input {
-        let selectedUserPublisher: AnyPublisher<User?, Never>
+        let selectedUserPublisher: AnyPublisher<Frined?, Never>
     }
     
     struct Output {
-        let usersPublisher: AnyPublisher<[User], Never>
+        let processedDataPublisher: AnyPublisher<[ProcessedFriendData], Never>
     }
     
     // MARK: -  publisher
     
     private var cancellables: Set<AnyCancellable> = []
-    private lazy var usersPublisher = CurrentValueSubject<[User], Never>([])
-    private lazy var userUpdatePublisher = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
+    private lazy var friendsPublisher = CurrentValueSubject<[Frined], Never>([])
+    private lazy var friendsUpdatePublisher = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
+    private lazy var processedFriendsDataPublisher = PassthroughSubject<[ProcessedFriendData], Never>()
     
     // MARK: - private properties
     
@@ -58,11 +59,12 @@ class ViewModel {
     func bind(_ input: ViewModel.Input) -> ViewModel.Output {
         viewDidLoad()
         
-        handleSelectedUserPublisher(input.selectedUserPublisher)
-        handleUserUpdatePublisher()
+        handleFriendsPublisher()
+        handleFriendUpdatePublisher()
+        handleSelectedFriendPublisher(input.selectedUserPublisher)
         
         return Output(
-            usersPublisher: usersPublisher.eraseToAnyPublisher()
+            processedDataPublisher: processedFriendsDataPublisher.eraseToAnyPublisher()
         )
     }
 }
@@ -71,53 +73,65 @@ class ViewModel {
 private extension ViewModel {
     func viewDidLoad() {
         
-        let users = generateUsers(.new(userLocation: userLocation))
+        let friends = generateFriends(.new(userLocation: userLocation))
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
             guard let self else { return }
-            usersPublisher.send(users)
+            friendsPublisher.send(friends)
         }
     }
     
-    func handleSelectedUserPublisher(_ publisher: AnyPublisher<User?, Never>) {
-        publisher
-            .sink { user in
-                print(user?.name ?? "No user selected")
-            }
-            .store(in: &cancellables)
-    }
-    
-    func handleUserUpdatePublisher() {
-        userUpdatePublisher
-            .sink { [weak self] _ in
+    func handleFriendsPublisher() {
+        friendsPublisher
+            .sink { [weak self] friends in
                 guard let self else { return }
-                let newUsers = generateUsers(.fromUsersOld(oldUsers: usersPublisher.value))
-                usersPublisher.send(newUsers)
+                let proccessedData = processFriendsData(friends)
+                processedFriendsDataPublisher.send(proccessedData)
             }
             .store(in: &cancellables)
     }
     
-    func generateUsers(_ type: LocationType) -> [User] {
+    func handleSelectedFriendPublisher(_ publisher: AnyPublisher<Frined?, Never>) {
+        publisher
+            .sink { friend in
+                print(friend?.name ?? "No friend selected")
+            }
+            .store(in: &cancellables)
+    }
+    
+    func handleFriendUpdatePublisher() {
+        friendsUpdatePublisher
+            .sink { [weak self] _ in
+                
+                guard let self else { return }
+                
+                let newFriends = generateFriends(.fromOldData(data: friendsPublisher.value))
+                friendsPublisher.send(newFriends)
+            }
+            .store(in: &cancellables)
+    }
+    
+    func generateFriends(_ type: LocationType) -> [Frined] {
         
-        let users: [User]
+        let users: [Frined]
         let delta: Double
-       
-        switch type {
         
+        switch type {
+            
         case .new(let userLocation):
             delta = 0.5
             users = names.map { name in
-                User(
+                Frined(
                     id: UUID(),
                     name: name,
                     location: generateRandomLocationRelativeTo(userLocation, withDelta: delta)
                 )
             }
             
-        case .fromUsersOld(let oldUsers):
+        case .fromOldData(let oldUsers):
             delta = 0.01
             users = oldUsers.map { oldUser in
-                User(
+                Frined(
                     id: oldUser.id,
                     name: oldUser.name,
                     location: generateRandomLocationRelativeTo(
@@ -143,9 +157,45 @@ private extension ViewModel {
         
         return CLLocation(latitude: newRandomLatitude, longitude: newRandomLongitude)
     }
+    
+    func calculateDistance(from location1: CLLocation, to location2: CLLocation) -> Double {
+        return location1.distance(from: location2)
+    }
+    
+    func processFriendsData(_ friends: [Frined]) -> [ProcessedFriendData] {
+        let pinnedUsers = friends.filter { $0.isPinned }
+        let processedData: [ProcessedFriendData]
+        
+        if pinnedUsers.count == 1, let singlePinnedFriend = pinnedUsers.first {
+            processedData = friends.map { friend in
+                let distance = self.calculateDistance(from: singlePinnedFriend.location, to: friend.location)
+                let formattedValue = String(format: "%.2f", distance) // "3.14"
+                return ProcessedFriendData(
+                    id: friend.id,
+                    name: friend.name,
+                    distance: friend == singlePinnedFriend ? 0 : distance,
+                    isPinned: friend.isPinned,
+                    message: friend == singlePinnedFriend ? "" : "\(formattedValue) meters away from \(singlePinnedFriend.name)"
+                )
+            }
+        } else {
+            processedData = friends.map { friend in
+                let distance = self.calculateDistance(from: self.userLocation, to: friend.location)
+                let formattedValue = String(format: "%.2f", distance) // "3.14"
+                return ProcessedFriendData(
+                    id: friend.id,
+                    name: friend.name,
+                    distance: distance,
+                    isPinned: friend.isPinned,
+                    message: "\(formattedValue) meters from you"
+                )
+            }
+        }
+        return processedData
+    }
 }
 
 enum LocationType {
     case new(userLocation: CLLocation)
-    case fromUsersOld(oldUsers: [User])
+    case fromOldData(data: [Frined])
 }

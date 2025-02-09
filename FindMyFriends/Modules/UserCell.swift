@@ -49,9 +49,9 @@ final class UserCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func configureWith(user: User) {
+    func configureWith(user: ProcessedFriendData) {
         nameLabel.text = user.name
-        infoLabel.text = String(user.location.coordinate.latitude + user.location.coordinate.longitude)
+        infoLabel.text = user.message
     }
     
     func configureSelected(_ bool: Bool) {

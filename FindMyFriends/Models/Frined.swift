@@ -8,13 +8,13 @@
 import Foundation
 import CoreLocation
 
-struct User: Hashable {
+struct Frined: Hashable {
     let id: UUID
     let name: String
     let location: CLLocation
-    let pinned: Bool = false
+    let isPinned: Bool = false
     
-    static func == (lhs: User, rhs: User) -> Bool {
+    static func == (lhs: Frined, rhs: Frined) -> Bool {
         lhs.id == rhs.id
     }
 }

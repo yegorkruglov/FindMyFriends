@@ -17,7 +17,7 @@ final class ViewController: UIViewController {
     // MARK: - publishers
     
     private var cancellables: Set<AnyCancellable> = []
-    private var selectedUserPublisher = PassthroughSubject<User?, Never>()
+    private var selectedUserPublisher = PassthroughSubject<Frined?, Never>()
     
     // MARK: - ui
     
@@ -58,7 +58,7 @@ final class ViewController: UIViewController {
     
     // MARK: - data sources
     
-    private lazy var pinnedUsersDataSource = UITableViewDiffableDataSource<Section, User>(tableView: pinnedUsersTableView)
+    private lazy var pinnedUsersDataSource = UITableViewDiffableDataSource<Section, ProcessedFriendData>(tableView: pinnedUsersTableView)
     { [weak self] tableView, indexPath, itemIdentifier in
         guard
             let self,
@@ -70,7 +70,7 @@ final class ViewController: UIViewController {
         
         return cell
     }
-    private lazy var allUsersDataSource = UITableViewDiffableDataSource<Section, User>(tableView: allUsersTableView)
+    private lazy var allUsersDataSource = UITableViewDiffableDataSource<Section, ProcessedFriendData>(tableView: allUsersTableView)
     { [weak self] tableView, indexPath, itemIdentifier in
         guard
             let self,
@@ -177,7 +177,7 @@ private extension ViewController {
         
         let output = viewModel.bind(input)
         
-        handleUsersPublisher(output.usersPublisher)
+        handleUsersPublisher(output.processedDataPublisher)
     }
     
     func configureAllUserTableView() {
@@ -187,7 +187,7 @@ private extension ViewController {
         allUsersTableView.layer.cornerRadius = 20
         allUsersTableView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         
-        var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
+        var snapshot = NSDiffableDataSourceSnapshot<Section, ProcessedFriendData>()
         snapshot.appendSections([.main])
         snapshot.appendItems([], toSection: .main)
         allUsersDataSource.apply(snapshot)
@@ -203,13 +203,13 @@ private extension ViewController {
         pinnedUsersTableView.backgroundColor = .clear
         pinnedUsersTableView.rowHeight = 100
         
-        var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
+        var snapshot = NSDiffableDataSourceSnapshot<Section, ProcessedFriendData>()
         snapshot.appendSections([.main])
         snapshot.appendItems([], toSection: .main)
         pinnedUsersDataSource.apply(snapshot)
     }
     
-    func handleUsersPublisher( _ publisher: AnyPublisher<[User], Never>) {
+    func handleUsersPublisher( _ publisher: AnyPublisher<[ProcessedFriendData], Never>) {
         publisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
@@ -217,18 +217,22 @@ private extension ViewController {
                 self?.activityIndicator.stopAnimating()
                 self?.allUsersTableView.isHidden = false
                 self?.pinnedView.isHidden = false
-                self?.displayAllUsers(users)
+                self?.displayUsers(users)
             }
             .store(in: &cancellables)
     }
     
-    func displayAllUsers(_ users: [User]) {
+    func displayUsers(_ allFriends: [ProcessedFriendData]) {
+        var pinnedSnapshot = NSDiffableDataSourceSnapshot<Section, ProcessedFriendData>()
+        pinnedSnapshot.appendSections([.main])
+        pinnedSnapshot.appendItems(allFriends.filter { $0.isPinned} )
+        pinnedUsersDataSource.applySnapshotUsingReloadData(pinnedSnapshot)
+
         
-        var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
-        snapshot.appendSections([.main])
-        snapshot.appendItems(users, toSection: .main)
-        
-        allUsersDataSource.applySnapshotUsingReloadData(snapshot)
+        var allFriendsSnapshot = NSDiffableDataSourceSnapshot<Section, ProcessedFriendData>()
+        allFriendsSnapshot.appendSections([.main])
+        allFriendsSnapshot.appendItems(allFriends, toSection: .main)
+        allUsersDataSource.applySnapshotUsingReloadData(allFriendsSnapshot)
     }
     
     func shoudDisplayPinned(_ bool: Bool) {
@@ -245,61 +249,11 @@ private extension ViewController {
 
 extension ViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        
-        guard
-            let count = tableView.indexPathsForSelectedRows?.count,
-            count <= 3
-        else {
-            tableView.deselectRow(at: indexPath, animated: true)
-            return
-        }
-        
-        if let user = allUsersDataSource.itemIdentifier(for: indexPath) {
-            var snapshot = pinnedUsersDataSource.snapshot()
-            snapshot.appendItems([user], toSection: .main)
-            pinnedUsersDataSource.apply(snapshot)
-        }
-        
-        if let cell = tableView.cellForRow(at: indexPath) as? UserCell {
-            cell.configureSelected(true)
-        }
-        
-        if allUsersTableView.indexPathsForSelectedRows?.count == 1,
-           let selectedIndexPath = allUsersTableView.indexPathsForSelectedRows?.first,
-           let selectedUser = allUsersDataSource.itemIdentifier(for: selectedIndexPath) {
-            selectedUserPublisher.send(selectedUser)
-        } else {
-            selectedUserPublisher.send(nil)
-        }
-        
-        shoudDisplayPinned(true)
+      
     }
     
     func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
-        let count = tableView.indexPathsForSelectedRows?.count ?? 0
-        
-        guard let userToRemove = allUsersDataSource.itemIdentifier(for: indexPath) else { return }
-        
-        var snapshot = pinnedUsersDataSource.snapshot()
-        snapshot.deleteItems([userToRemove])
-        
-        pinnedUsersDataSource.apply(snapshot)
-        
-        if let cell = tableView.cellForRow(at: indexPath) as? UserCell {
-            cell.configureSelected(false)
-        }
-        
-        UIView.animate(withDuration: 0.3) {
-            self.view.layoutIfNeeded()
-        }
-        
-        if count == 0 {
-            shoudDisplayPinned(false)
-        }
-        
-        if count != 1 {
-            selectedUserPublisher.send(nil)
-        }
+       
     }
 }
 
