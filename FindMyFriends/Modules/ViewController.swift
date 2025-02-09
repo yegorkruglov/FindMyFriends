@@ -9,8 +9,17 @@ import UIKit
 import Combine
 
 final class ViewController: UIViewController {
+    
+    // MARK: - external depandecies
+    
     private let viewModel: ViewModel
+    
+    // MARK: - publishers
+    
     private var cancellables: Set<AnyCancellable> = []
+    private var selectedUserPublisher = PassthroughSubject<User?, Never>()
+    
+    // MARK: - ui
     
     private lazy var activityIndicator: UIActivityIndicatorView = {
         let activityIndicator = UIActivityIndicatorView(style: .large)
@@ -18,14 +27,49 @@ final class ViewController: UIViewController {
         activityIndicator.startAnimating()
         return activityIndicator
     }()
-    
+    private lazy var pinnedView: UIView = {
+        let view = UIView()
+        view.layer.cornerRadius = 20
+        return view
+    }()
+    private lazy var infoLabel: UILabel = {
+        let label = UILabel()
+        label.textAlignment = .center
+        label.font = .preferredFont(forTextStyle: .body)
+        label.textColor = .secondaryLabel
+        label.text = "Tap up to three friends in the list to pin them to the top. Or pin one to see distance relatively to other friends."
+        label.numberOfLines = 0
+        return label
+    }()
+    private lazy var pinnedUsersTableView: UITableView = {
+        let tableView = SelfSizingTableView()
+        tableView.register(UserCell.self, forCellReuseIdentifier: UserCell.identifier)
+        return tableView
+    }()
     private lazy var allUsersTableView: UITableView = {
         let tableView = UITableView()
         tableView.register(UserCell.self, forCellReuseIdentifier: UserCell.identifier)
         tableView.delegate = self
         return tableView
     }()
+    private lazy var pinnedViewHeightConstraint: NSLayoutConstraint = {
+        pinnedView.heightAnchor.constraint(equalToConstant: 80)
+    }()
     
+    // MARK: - data sources
+    
+    private lazy var pinnedUsersDataSource = UITableViewDiffableDataSource<Section, User>(tableView: pinnedUsersTableView)
+    { [weak self] tableView, indexPath, itemIdentifier in
+        guard
+            let self,
+            let cell = pinnedUsersTableView.dequeueReusableCell(withIdentifier: UserCell.identifier, for: indexPath)
+                as? UserCell
+        else { return UITableViewCell() }
+        
+        cell.configureWith(user: itemIdentifier)
+        
+        return cell
+    }
     private lazy var allUsersDataSource = UITableViewDiffableDataSource<Section, User>(tableView: allUsersTableView)
     { [weak self] tableView, indexPath, itemIdentifier in
         guard
@@ -41,44 +85,7 @@ final class ViewController: UIViewController {
         return cell
     }
     
-    private lazy var pinnedUsersTableView: UITableView = {
-        let tableView = SelfSizingTableView()
-        tableView.register(UserCell.self, forCellReuseIdentifier: UserCell.identifier)
-        return tableView
-    }()
-    
-    private lazy var pinnedUsersDataSource = UITableViewDiffableDataSource<Section, User>(tableView: pinnedUsersTableView)
-    { [weak self] tableView, indexPath, itemIdentifier in
-        guard
-            let self,
-            let cell = pinnedUsersTableView.dequeueReusableCell(withIdentifier: UserCell.identifier, for: indexPath)
-                as? UserCell
-        else { return UITableViewCell() }
-        
-        cell.configureWith(user: itemIdentifier)
-        
-        return cell
-    }
-    
-    private lazy var pinnedView: UIView = {
-        let view = UIView()
-        view.layer.cornerRadius = 20
-        return view
-    }()
-    
-    private lazy var infoLabel: UILabel = {
-        let label = UILabel()
-        label.textAlignment = .center
-        label.font = .preferredFont(forTextStyle: .body)
-        label.textColor = .secondaryLabel
-        label.text = "Tap up to three friends in the list to pin them to the top. Or pin one to see distance relatively to other friends."
-        label.numberOfLines = 0
-        return label
-    }()
-    
-    private lazy var pinnedViewHeightConstraint: NSLayoutConstraint = {
-        pinnedView.heightAnchor.constraint(equalToConstant: 80)
-    }()
+    // MARK: -  initializers
     
     init(viewModel: ViewModel) {
         self.viewModel = viewModel
@@ -90,12 +97,16 @@ final class ViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    // MARK: - lifecycle
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setup()
         bind()
     }
 }
+
+// MARK: -  private methods
 
 private extension ViewController {
     
@@ -175,17 +186,25 @@ private extension ViewController {
     }
     
     func bind() {
-        viewModel.viewDidLoad()
+        let input = ViewModel.Input(
+            selectedUserPublisher: selectedUserPublisher.eraseToAnyPublisher()
+        )
         
-        viewModel.usersPublisher
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] users in
-                self?.activityIndicator.stopAnimating()
-                self?.allUsersTableView.isHidden = false
-                self?.pinnedView.isHidden = false
-                self?.displayAllUsers(users)
-            }
-            .store(in: &cancellables)
+        let output = viewModel.bind(input)
+        
+        handleUsersPublisher(output.usersPublisher)
+    }
+    
+    func handleUsersPublisher( _ publisher: AnyPublisher<[User], Never>) {
+        publisher
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] users in
+            self?.activityIndicator.stopAnimating()
+            self?.allUsersTableView.isHidden = false
+            self?.pinnedView.isHidden = false
+            self?.displayAllUsers(users)
+        }
+        .store(in: &cancellables)
     }
     
     func displayAllUsers(_ users: [User]) {
@@ -205,8 +224,11 @@ private extension ViewController {
     }
 }
 
+// MARK: - UITableViewDelegate
+
 extension ViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
         guard
             let count = tableView.indexPathsForSelectedRows?.count,
             count > 3
@@ -216,12 +238,21 @@ extension ViewController: UITableViewDelegate {
                 snapshot.appendItems([user], toSection: .main)
                 pinnedUsersDataSource.apply(snapshot)
             }
+            
             if let cell = tableView.cellForRow(at: indexPath) as? UserCell {
                 cell.configureSelected(true)
             }
+            
+            if allUsersTableView.indexPathsForSelectedRows?.count == 1,
+               let selectedIndexPath = allUsersTableView.indexPathsForSelectedRows?.first,
+               let selectedUser = allUsersDataSource.itemIdentifier(for: selectedIndexPath) {
+                selectedUserPublisher.send(selectedUser)
+            } else {
+                selectedUserPublisher.send(nil)
+            }
+            
             shoudDisplayPinned(true)
     
-            // сохранить пины в vm
             return
         }
         
