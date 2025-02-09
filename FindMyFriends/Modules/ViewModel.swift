@@ -23,6 +23,7 @@ class ViewModel {
     
     private var cancellables: Set<AnyCancellable> = []
     private lazy var usersPublisher = CurrentValueSubject<[User], Never>([])
+    private lazy var userUpdatePublisher = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
 
     
     // MARK: - private properties
@@ -50,7 +51,6 @@ class ViewModel {
         "Abigail White"
     ]
     
-    
     private let userLocation: CLLocation = CLLocation(latitude: 30, longitude: 60)
     private var selectedUserLocation: CLLocation?
     
@@ -59,14 +59,12 @@ class ViewModel {
     func bind(_ input: ViewModel.Input) -> ViewModel.Output {
         viewDidLoad()
         
-        
         handleSelectedUserPublisher(input.selectedUserPublisher)
+        handleUserUpdatePublisher()
         
-        let output: ViewModel.Output = Output(
+        return Output(
             usersPublisher: usersPublisher.eraseToAnyPublisher()
         )
-        
-        return output
     }
 }
 
@@ -133,6 +131,17 @@ private extension ViewModel {
         let newRandomLongitude = Double.random(in: longMin...longMax)
         
         return CLLocation(latitude: newRandomLatitude, longitude: newRandomLongitude)
+    }
+    
+    func handleUserUpdatePublisher() {
+        userUpdatePublisher
+            .sink { [weak self] _ in
+                guard let self else { return }
+                let newUsers = generateUsers(.fromUsersOld(oldUsers: usersPublisher.value))
+                print(newUsers.first?.location.coordinate)
+                usersPublisher.send(newUsers)
+            }
+            .store(in: &cancellables)
     }
 }
 

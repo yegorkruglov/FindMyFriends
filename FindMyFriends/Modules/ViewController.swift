@@ -138,24 +138,9 @@ private extension ViewController {
         
         pinnedView.isHidden = true
         
-        allUsersTableView.isHidden = true
-        allUsersTableView.backgroundColor = .systemBackground
-        allUsersTableView.allowsMultipleSelection = true
-        allUsersTableView.layer.cornerRadius = 20
-        allUsersTableView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        configureAllUserTableView()
         
-        pinnedUsersTableView.isHidden = true
-        pinnedUsersTableView.layer.cornerRadius = 20
-        pinnedUsersTableView.separatorStyle = .none
-        pinnedUsersTableView.allowsSelection = false
-        pinnedUsersTableView.isScrollEnabled = false
-        pinnedUsersTableView.backgroundColor = .clear
-        pinnedUsersTableView.rowHeight = 100
-        
-        var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
-        snapshot.appendSections([.main])
-        snapshot.appendItems([], toSection: .main)
-        pinnedUsersDataSource.apply(snapshot)
+        confugurePinnedUserTableView()
     }
     
     func makeConstraints() {
@@ -193,6 +178,35 @@ private extension ViewController {
         let output = viewModel.bind(input)
         
         handleUsersPublisher(output.usersPublisher)
+    }
+    
+    func configureAllUserTableView() {
+        allUsersTableView.isHidden = true
+        allUsersTableView.backgroundColor = .systemBackground
+        allUsersTableView.allowsMultipleSelection = true
+        allUsersTableView.layer.cornerRadius = 20
+        allUsersTableView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        
+        var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
+        snapshot.appendSections([.main])
+        snapshot.appendItems([], toSection: .main)
+        pinnedUsersDataSource.apply(snapshot)
+        print(snapshot.sectionIdentifiers)
+    }
+    
+    func confugurePinnedUserTableView() {
+        pinnedUsersTableView.isHidden = true
+        pinnedUsersTableView.layer.cornerRadius = 20
+        pinnedUsersTableView.separatorStyle = .none
+        pinnedUsersTableView.allowsSelection = false
+        pinnedUsersTableView.isScrollEnabled = false
+        pinnedUsersTableView.backgroundColor = .clear
+        pinnedUsersTableView.rowHeight = 100
+        
+        var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
+        snapshot.appendSections([.main])
+        snapshot.appendItems([], toSection: .main)
+        pinnedUsersDataSource.apply(snapshot)
     }
     
     func handleUsersPublisher( _ publisher: AnyPublisher<[User], Never>) {
