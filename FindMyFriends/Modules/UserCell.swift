@@ -15,9 +15,22 @@ final class UserCell: UITableViewCell {
         view.backgroundColor = .systemBackground
         return view
     }()
+    private lazy var userImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
+        imageView.layer.cornerRadius = 10
+        imageView.image = UIImage(systemName: "person")
+        return imageView
+    }()
     private lazy var nameLabel: UILabel = {
         let label = UILabel()
         label.font = .preferredFont(forTextStyle: .headline)
+        return label
+    }()
+    private lazy var infoLabel: UILabel = {
+        let label = UILabel()
+        label.font = .preferredFont(forTextStyle: .caption1)
+        label.text = "Distance from you: 100km"
         return label
     }()
     private lazy var pinImageView: UIImageView = {
@@ -56,7 +69,9 @@ final class UserCell: UITableViewCell {
         backgrndView.layer.cornerRadius = 20
         
         [backgrndView,
+         userImageView,
          nameLabel,
+         infoLabel,
          pinImageView]
             .forEach { subview in
                 contentView.addSubview(subview)
@@ -69,14 +84,25 @@ final class UserCell: UITableViewCell {
             backgrndView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             backgrndView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            nameLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
-            nameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            nameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            userImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            userImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+            userImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            userImageView.widthAnchor.constraint(equalTo: userImageView.heightAnchor),
             
-            pinImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            pinImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+            
+            pinImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             pinImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            
+            nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            nameLabel.leadingAnchor.constraint(equalTo: userImageView.trailingAnchor, constant: 16),
+            nameLabel.trailingAnchor.constraint(equalTo: pinImageView.leadingAnchor, constant: -16),
+            
+            infoLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 8),
+            infoLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+            infoLabel.leadingAnchor.constraint(equalTo: userImageView.trailingAnchor, constant: 16),
+            infoLabel.trailingAnchor.constraint(equalTo: pinImageView.leadingAnchor, constant: -16),
         ])
+        
+        pinImageView.setContentHuggingPriority(.defaultHigh, for: .horizontal)
     }
 }
