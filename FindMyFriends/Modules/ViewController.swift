@@ -197,14 +197,15 @@ private extension ViewController {
     
     func handleUsersPublisher( _ publisher: AnyPublisher<[User], Never>) {
         publisher
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] users in
-            self?.activityIndicator.stopAnimating()
-            self?.allUsersTableView.isHidden = false
-            self?.pinnedView.isHidden = false
-            self?.displayAllUsers(users)
-        }
-        .store(in: &cancellables)
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] users in
+                self?.activityIndicator.stopAnimating()
+                self?.allUsersTableView.isHidden = false
+                self?.pinnedView.isHidden = false
+                self?.displayAllUsers(users)
+            }
+            .store(in: &cancellables)
     }
     
     func displayAllUsers(_ users: [User]) {
@@ -252,7 +253,7 @@ extension ViewController: UITableViewDelegate {
             }
             
             shoudDisplayPinned(true)
-    
+            
             return
         }
         
@@ -279,6 +280,10 @@ extension ViewController: UITableViewDelegate {
         
         if count == 0 {
             shoudDisplayPinned(false)
+        }
+        
+        if count != 1 {
+            selectedUserPublisher.send(nil)
         }
     }
 }

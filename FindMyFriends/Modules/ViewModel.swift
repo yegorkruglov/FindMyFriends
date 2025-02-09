@@ -22,36 +22,45 @@ class ViewModel {
     // MARK: -  publisher
     
     private var cancellables: Set<AnyCancellable> = []
-    let usersPublisher = PassthroughSubject<[User], Never>()
+    private lazy var usersPublisher = CurrentValueSubject<[User], Never>([])
+
     
     // MARK: - private properties
     
-    private let names: [String] = ["John", "Stephen", "Michael", "David", "Robert", "William", "James", "Charles", "Joseph", "Thomas"]
+    private let names: [String] = [
+        "John Smith",
+        "Helen Row",
+        "Michael Johnson",
+        "Sophia Brown",
+        "James Garcia",
+        "Olivia Miller",
+        "Benjamin Davis",
+        "Isabella Rodriguez",
+        "Daniel Martinez",
+        "Mia Hernandez",
+        "Matthew Lopez",
+        "Charlotte Gonzalez",
+        "Ethan Wilson",
+        "Amelia Anderson",
+        "William Thomas",
+        "Harper Taylor",
+        "Henry Moore",
+        "Evelyn Jackson",
+        "Joseph Martin",
+        "Abigail White"
+    ]
+    
+    
     private let userLocation: CLLocation = CLLocation(latitude: 30, longitude: 60)
-    private var referenceLocation: CLLocation?
+    private var selectedUserLocation: CLLocation?
     
     // MARK: -  public methods
     
     func bind(_ input: ViewModel.Input) -> ViewModel.Output {
-        
-        
         viewDidLoad()
         
         
-        input.selectedUserPublisher
-            .sink { user in
-                guard let user else { return }
-                print(user.name)
-            }
-            .store(in: &cancellables)
-        
-        
-        
-        
-        
-        
-        
-        
+        handleSelectedUserPublisher(input.selectedUserPublisher)
         
         let output: ViewModel.Output = Output(
             usersPublisher: usersPublisher.eraseToAnyPublisher()
@@ -59,31 +68,13 @@ class ViewModel {
         
         return output
     }
-    
-    // MARK: -  private methods
-    
-    private func viewDidLoad() {
+}
 
-        let users = names.map { name in
-            
-            let latMax = userLocation.coordinate.latitude + 0.5
-            let latMin = userLocation.coordinate.latitude - 0.5
-            let longMax = userLocation.coordinate.longitude + 0.5
-            let longMin = userLocation.coordinate.longitude - 0.5
-            
-            let newRandomLatitude = Double.random(in: latMin...latMax)
-            let newRandomLongitude = Double.random(in: longMin...longMax)
-            
-            let newRandomLocation = CLLocation(latitude: newRandomLatitude, longitude: newRandomLongitude)
-            
-            let distanceToReference = referenceLocation?.distance(from: userLocation)
-            
-            return User(
-                id: UUID(),
-                name: name,
-                location: newRandomLocation
-            )
-        }
+// MARK: -  private methods
+private extension ViewModel {
+    func viewDidLoad() {
+        
+        let users = generateUsers(.new(userLocation: userLocation))
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
             guard let self else { return }
@@ -91,5 +82,61 @@ class ViewModel {
         }
     }
     
+    func handleSelectedUserPublisher(_ publisher: AnyPublisher<User?, Never>) {
+        publisher
+            .sink { user in
+                print(user?.name ?? "No user selected")
+            }
+            .store(in: &cancellables)
+    }
     
+    func generateUsers(_ type: LocationType) -> [User] {
+        
+        let users: [User]
+        let delta: Double
+       
+        switch type {
+        
+        case .new(let userLocation):
+            delta = 0.5
+            users = names.map { name in
+                User(
+                    name: name,
+                    location: generateRandomLocationRelativeTo(userLocation, withDelta: delta)
+                )
+            }
+            
+        case .fromUsersOld(let oldUsers):
+            delta = 0.01
+            users = oldUsers.map { oldUser in
+                User(
+                    name: oldUser.name,
+                    location: generateRandomLocationRelativeTo(
+                        oldUser.location,
+                        withDelta: delta
+                    )
+                )
+            }
+        }
+        
+        return users
+    }
+    
+    func generateRandomLocationRelativeTo(_ location: CLLocation, withDelta delta: Double) -> CLLocation {
+        
+        let latMax = userLocation.coordinate.latitude + delta
+        let latMin = userLocation.coordinate.latitude - delta
+        let longMax = userLocation.coordinate.longitude + delta
+        let longMin = userLocation.coordinate.longitude - delta
+        
+        let newRandomLatitude = Double.random(in: latMin...latMax)
+        let newRandomLongitude = Double.random(in: longMin...longMax)
+        
+        return CLLocation(latitude: newRandomLatitude, longitude: newRandomLongitude)
+    }
+}
+
+enum LocationType {
+    case new(userLocation: CLLocation)
+    case fromUsersOld(oldUsers: [User])
 }
