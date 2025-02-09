@@ -15,7 +15,7 @@ final class FriendCell: UITableViewCell {
         view.backgroundColor = .systemBackground
         return view
     }()
-    private lazy var frienDImageView: UIImageView = {
+    private lazy var friendImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
         imageView.layer.cornerRadius = 10
@@ -38,6 +38,8 @@ final class FriendCell: UITableViewCell {
         imageView.contentMode = .scaleAspectFit
         return imageView
     }()
+    private lazy var friendImageSize: CGFloat = contentView.frame.height 
+    private lazy var pinImageSize: CGFloat = contentView.frame.height * 0.6
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -70,7 +72,7 @@ final class FriendCell: UITableViewCell {
         backgrndView.layer.cornerRadius = 20
         
         [backgrndView,
-         frienDImageView,
+         friendImageView,
          nameLabel,
          infoLabel,
          pinImageView]
@@ -85,22 +87,24 @@ final class FriendCell: UITableViewCell {
             backgrndView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             backgrndView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            frienDImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            frienDImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
-            frienDImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            frienDImageView.widthAnchor.constraint(equalTo: frienDImageView.heightAnchor),
+            friendImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            friendImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            friendImageView.heightAnchor.constraint(equalToConstant: friendImageSize),
+            friendImageView.widthAnchor.constraint(equalToConstant: friendImageSize),
             
             
             pinImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             pinImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            pinImageView.heightAnchor.constraint(equalToConstant: pinImageSize),
+            pinImageView.widthAnchor.constraint(equalToConstant: pinImageSize),
             
             nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            nameLabel.leadingAnchor.constraint(equalTo: frienDImageView.trailingAnchor, constant: 16),
+            nameLabel.leadingAnchor.constraint(equalTo: friendImageView.trailingAnchor, constant: 16),
             nameLabel.trailingAnchor.constraint(equalTo: pinImageView.leadingAnchor, constant: -16),
             
             infoLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 8),
             infoLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
-            infoLabel.leadingAnchor.constraint(equalTo: frienDImageView.trailingAnchor, constant: 16),
+            infoLabel.leadingAnchor.constraint(equalTo: friendImageView.trailingAnchor, constant: 16),
             infoLabel.trailingAnchor.constraint(equalTo: pinImageView.leadingAnchor, constant: -16),
         ])
         
