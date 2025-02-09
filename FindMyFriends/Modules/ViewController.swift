@@ -17,7 +17,7 @@ final class ViewController: UIViewController {
     // MARK: - publishers
     
     private var cancellables: Set<AnyCancellable> = []
-    private var selectedUserPublisher = PassthroughSubject<Frined?, Never>()
+    private var selectedFriendPublisher = PassthroughSubject<UUID?, Never>()
     
     // MARK: - ui
     
@@ -41,14 +41,14 @@ final class ViewController: UIViewController {
         label.numberOfLines = 0
         return label
     }()
-    private lazy var pinnedUsersTableView: UITableView = {
+    private lazy var pinnedFriendsTableView: UITableView = {
         let tableView = SelfSizingTableView()
-        tableView.register(UserCell.self, forCellReuseIdentifier: UserCell.identifier)
+        tableView.register(FriendCell.self, forCellReuseIdentifier: FriendCell.identifier)
         return tableView
     }()
-    private lazy var allUsersTableView: UITableView = {
+    private lazy var allFriendsTableView: UITableView = {
         let tableView = UITableView()
-        tableView.register(UserCell.self, forCellReuseIdentifier: UserCell.identifier)
+        tableView.register(FriendCell.self, forCellReuseIdentifier: FriendCell.identifier)
         tableView.delegate = self
         return tableView
     }()
@@ -58,29 +58,29 @@ final class ViewController: UIViewController {
     
     // MARK: - data sources
     
-    private lazy var pinnedUsersDataSource = UITableViewDiffableDataSource<Section, ProcessedFriendData>(tableView: pinnedUsersTableView)
+    private lazy var pinnedFriendsDataSource = UITableViewDiffableDataSource<Section, ProcessedFriendData>(tableView: pinnedFriendsTableView)
     { [weak self] tableView, indexPath, itemIdentifier in
         guard
             let self,
-            let cell = pinnedUsersTableView.dequeueReusableCell(withIdentifier: UserCell.identifier, for: indexPath)
-                as? UserCell
+            let cell = pinnedFriendsTableView.dequeueReusableCell(withIdentifier: FriendCell.identifier, for: indexPath)
+                as? FriendCell
         else { return UITableViewCell() }
         
-        cell.configureWith(user: itemIdentifier)
+        cell.configureWith(friendData: itemIdentifier)
         
         return cell
     }
-    private lazy var allUsersDataSource = UITableViewDiffableDataSource<Section, ProcessedFriendData>(tableView: allUsersTableView)
+    private lazy var allFriendsDataSource = UITableViewDiffableDataSource<Section, ProcessedFriendData>(tableView: allFriendsTableView)
     { [weak self] tableView, indexPath, itemIdentifier in
         guard
             let self,
-            let cell = allUsersTableView.dequeueReusableCell(withIdentifier: UserCell.identifier, for: indexPath)
-                as? UserCell
+            let cell = allFriendsTableView.dequeueReusableCell(withIdentifier: FriendCell.identifier, for: indexPath)
+                as? FriendCell
         else { return UITableViewCell() }
         
         cell.selectionStyle = .none
-        cell.configureWith(user: itemIdentifier)
-        cell.configureSelected(tableView.indexPathsForSelectedRows?.contains(indexPath) ?? false)
+        cell.configureWith(friendData: itemIdentifier)
+        cell.configureSelected(itemIdentifier.isPinned)
         
         return cell
     }
@@ -119,7 +119,7 @@ private extension ViewController {
     func addSubviews() {
         [activityIndicator,
          pinnedView,
-         allUsersTableView]
+         allFriendsTableView]
             .forEach { subview in
                 view.addSubview(subview)
                 subview.translatesAutoresizingMaskIntoConstraints = false
@@ -127,7 +127,7 @@ private extension ViewController {
         
         
         [infoLabel,
-         pinnedUsersTableView].forEach { subview in
+         pinnedFriendsTableView].forEach { subview in
             pinnedView.addSubview(subview)
             subview.translatesAutoresizingMaskIntoConstraints = false
         }
@@ -138,9 +138,9 @@ private extension ViewController {
         
         pinnedView.isHidden = true
         
-        configureAllUserTableView()
+        configureAllFriendsTableView()
         
-        confugurePinnedUserTableView()
+        confugurePinnedFriendsTableView()
     }
     
     func makeConstraints() {
@@ -155,89 +155,90 @@ private extension ViewController {
             infoLabel.leadingAnchor.constraint(equalTo: pinnedView.leadingAnchor),
             infoLabel.trailingAnchor.constraint(equalTo: pinnedView.trailingAnchor),
             
-            pinnedUsersTableView.topAnchor.constraint(equalTo: pinnedView.topAnchor),
-            pinnedUsersTableView.leadingAnchor.constraint(equalTo: pinnedView.leadingAnchor),
-            pinnedUsersTableView.trailingAnchor.constraint(equalTo: pinnedView.trailingAnchor),
-            pinnedUsersTableView.bottomAnchor.constraint(equalTo: pinnedView.bottomAnchor),
+            pinnedFriendsTableView.topAnchor.constraint(equalTo: pinnedView.topAnchor),
+            pinnedFriendsTableView.leadingAnchor.constraint(equalTo: pinnedView.leadingAnchor),
+            pinnedFriendsTableView.trailingAnchor.constraint(equalTo: pinnedView.trailingAnchor),
+            pinnedFriendsTableView.bottomAnchor.constraint(equalTo: pinnedView.bottomAnchor),
             
             activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             
-            allUsersTableView.topAnchor.constraint(equalTo: pinnedView.bottomAnchor),
-            allUsersTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            allUsersTableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
-            allUsersTableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            allFriendsTableView.topAnchor.constraint(equalTo: pinnedView.bottomAnchor),
+            allFriendsTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            allFriendsTableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            allFriendsTableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
         ])
     }
     
     func bind() {
         let input = ViewModel.Input(
-            selectedUserPublisher: selectedUserPublisher.eraseToAnyPublisher()
+            selectedFriendPublisher: selectedFriendPublisher.eraseToAnyPublisher()
         )
         
         let output = viewModel.bind(input)
         
-        handleUsersPublisher(output.processedDataPublisher)
+        handleFriendsPublisher(output.processedDataPublisher)
     }
     
-    func configureAllUserTableView() {
-        allUsersTableView.isHidden = true
-        allUsersTableView.backgroundColor = .systemBackground
-        allUsersTableView.allowsMultipleSelection = true
-        allUsersTableView.layer.cornerRadius = 20
-        allUsersTableView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+    func configureAllFriendsTableView() {
+        allFriendsTableView.isHidden = true
+        allFriendsTableView.backgroundColor = .systemBackground
+        allFriendsTableView.allowsMultipleSelection = true
+        allFriendsTableView.layer.cornerRadius = 20
+        allFriendsTableView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         
         var snapshot = NSDiffableDataSourceSnapshot<Section, ProcessedFriendData>()
         snapshot.appendSections([.main])
         snapshot.appendItems([], toSection: .main)
-        allUsersDataSource.apply(snapshot)
-        print(snapshot.sectionIdentifiers)
+        allFriendsDataSource.apply(snapshot)
     }
     
-    func confugurePinnedUserTableView() {
-        pinnedUsersTableView.isHidden = true
-        pinnedUsersTableView.layer.cornerRadius = 20
-        pinnedUsersTableView.separatorStyle = .none
-        pinnedUsersTableView.allowsSelection = false
-        pinnedUsersTableView.isScrollEnabled = false
-        pinnedUsersTableView.backgroundColor = .clear
-        pinnedUsersTableView.rowHeight = 100
+    func confugurePinnedFriendsTableView() {
+        pinnedFriendsTableView.isHidden = true
+        pinnedFriendsTableView.layer.cornerRadius = 20
+        pinnedFriendsTableView.separatorStyle = .none
+        pinnedFriendsTableView.allowsSelection = false
+        pinnedFriendsTableView.isScrollEnabled = false
+        pinnedFriendsTableView.backgroundColor = .clear
+        pinnedFriendsTableView.rowHeight = 100
         
         var snapshot = NSDiffableDataSourceSnapshot<Section, ProcessedFriendData>()
         snapshot.appendSections([.main])
         snapshot.appendItems([], toSection: .main)
-        pinnedUsersDataSource.apply(snapshot)
+        pinnedFriendsDataSource.apply(snapshot)
     }
     
-    func handleUsersPublisher( _ publisher: AnyPublisher<[ProcessedFriendData], Never>) {
+    func handleFriendsPublisher( _ publisher: AnyPublisher<[ProcessedFriendData], Never>) {
         publisher
             .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] users in
+            .sink { [weak self] friends in
                 self?.activityIndicator.stopAnimating()
-                self?.allUsersTableView.isHidden = false
+                self?.allFriendsTableView.isHidden = false
                 self?.pinnedView.isHidden = false
-                self?.displayUsers(users)
+                self?.displayFriends(friends)
             }
             .store(in: &cancellables)
     }
     
-    func displayUsers(_ allFriends: [ProcessedFriendData]) {
+    func displayFriends(_ allFriends: [ProcessedFriendData]) {
         var pinnedSnapshot = NSDiffableDataSourceSnapshot<Section, ProcessedFriendData>()
         pinnedSnapshot.appendSections([.main])
         pinnedSnapshot.appendItems(allFriends.filter { $0.isPinned} )
-        pinnedUsersDataSource.applySnapshotUsingReloadData(pinnedSnapshot)
-
+        pinnedSnapshot.reloadItems(allFriends.filter { $0.isPinned} )
+        pinnedFriendsDataSource.apply(pinnedSnapshot, animatingDifferences: false)
+        shoudDisplayPinned(!pinnedSnapshot.itemIdentifiers.isEmpty)
         
         var allFriendsSnapshot = NSDiffableDataSourceSnapshot<Section, ProcessedFriendData>()
         allFriendsSnapshot.appendSections([.main])
         allFriendsSnapshot.appendItems(allFriends, toSection: .main)
-        allUsersDataSource.applySnapshotUsingReloadData(allFriendsSnapshot)
+        allFriendsSnapshot.reloadItems(allFriends)
+        allFriendsDataSource.apply(allFriendsSnapshot, animatingDifferences: false)
     }
     
     func shoudDisplayPinned(_ bool: Bool) {
         pinnedViewHeightConstraint.isActive = !bool
-        pinnedUsersTableView.isHidden = !bool
+        pinnedFriendsTableView.isHidden = !bool
         infoLabel.isHidden = bool
         UIView.animate(withDuration: 0.3) {
             self.view.layoutIfNeeded()
@@ -248,12 +249,17 @@ private extension ViewController {
 // MARK: - UITableViewDelegate
 
 extension ViewController: UITableViewDelegate {
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-      
+        guard let id = allFriendsDataSource.itemIdentifier(for: indexPath)?.id else { return }
+        
+        selectedFriendPublisher.send(id)
     }
     
     func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
-       
+        guard let id = allFriendsDataSource.itemIdentifier(for: indexPath)?.id else { return }
+        
+        selectedFriendPublisher.send(id)
     }
 }
 

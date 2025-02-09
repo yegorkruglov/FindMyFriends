@@ -1,5 +1,5 @@
 //
-//  UserCell.swift
+//  FrinedCell.swift
 //  FindMyFriends
 //
 //  Created by Egor Kruglov on 06.02.2025.
@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class UserCell: UITableViewCell {
+final class FriendCell: UITableViewCell {
     static var identifier: String { String(describing: Self.self) }
     
     private lazy var backgrndView: UIView = {
@@ -15,7 +15,7 @@ final class UserCell: UITableViewCell {
         view.backgroundColor = .systemBackground
         return view
     }()
-    private lazy var userImageView: UIImageView = {
+    private lazy var frienDImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
         imageView.layer.cornerRadius = 10
@@ -49,9 +49,9 @@ final class UserCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func configureWith(user: ProcessedFriendData) {
-        nameLabel.text = user.name
-        infoLabel.text = user.message
+    func configureWith(friendData: ProcessedFriendData) {
+        nameLabel.text = friendData.name
+        infoLabel.text = friendData.message
     }
     
     func configureSelected(_ bool: Bool) {
@@ -70,7 +70,7 @@ final class UserCell: UITableViewCell {
         backgrndView.layer.cornerRadius = 20
         
         [backgrndView,
-         userImageView,
+         frienDImageView,
          nameLabel,
          infoLabel,
          pinImageView]
@@ -85,22 +85,22 @@ final class UserCell: UITableViewCell {
             backgrndView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             backgrndView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             
-            userImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            userImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
-            userImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            userImageView.widthAnchor.constraint(equalTo: userImageView.heightAnchor),
+            frienDImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            frienDImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
+            frienDImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            frienDImageView.widthAnchor.constraint(equalTo: frienDImageView.heightAnchor),
             
             
             pinImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             pinImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             
             nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
-            nameLabel.leadingAnchor.constraint(equalTo: userImageView.trailingAnchor, constant: 16),
+            nameLabel.leadingAnchor.constraint(equalTo: frienDImageView.trailingAnchor, constant: 16),
             nameLabel.trailingAnchor.constraint(equalTo: pinImageView.leadingAnchor, constant: -16),
             
             infoLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 8),
             infoLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
-            infoLabel.leadingAnchor.constraint(equalTo: userImageView.trailingAnchor, constant: 16),
+            infoLabel.leadingAnchor.constraint(equalTo: frienDImageView.trailingAnchor, constant: 16),
             infoLabel.trailingAnchor.constraint(equalTo: pinImageView.leadingAnchor, constant: -16),
         ])
         

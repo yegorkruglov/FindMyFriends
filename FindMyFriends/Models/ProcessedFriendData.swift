@@ -17,4 +17,8 @@ struct ProcessedFriendData: Hashable {
     static func == (lhs: ProcessedFriendData, rhs: ProcessedFriendData) -> Bool {
         lhs.id == rhs.id
     }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
 }

@@ -12,7 +12,7 @@ import CoreLocation
 class ViewModel {
     
     struct Input {
-        let selectedUserPublisher: AnyPublisher<Frined?, Never>
+        let selectedFriendPublisher: AnyPublisher<UUID?, Never>
     }
     
     struct Output {
@@ -52,7 +52,7 @@ class ViewModel {
     ]
     
     private let userLocation: CLLocation = CLLocation(latitude: 30, longitude: 60)
-    private var selectedUserLocation: CLLocation?
+    private var selectedFriendLocation: CLLocation?
     
     // MARK: -  public methods
     
@@ -61,7 +61,7 @@ class ViewModel {
         
         handleFriendsPublisher()
         handleFriendUpdatePublisher()
-        handleSelectedFriendPublisher(input.selectedUserPublisher)
+        handleSelectedFriendPublisher(input.selectedFriendPublisher)
         
         return Output(
             processedDataPublisher: processedFriendsDataPublisher.eraseToAnyPublisher()
@@ -91,10 +91,21 @@ private extension ViewModel {
             .store(in: &cancellables)
     }
     
-    func handleSelectedFriendPublisher(_ publisher: AnyPublisher<Frined?, Never>) {
+    func handleSelectedFriendPublisher(_ publisher: AnyPublisher<UUID?, Never>) {
         publisher
-            .sink { friend in
-                print(friend?.name ?? "No friend selected")
+            .sink { [weak self] id in
+                guard let self else { return }
+                
+                if let index = friendsPublisher.value.firstIndex(where: { $0.id == id }) {
+                    var newFriends = friendsPublisher.value
+                    
+                    if !newFriends[index].isPinned && newFriends.filter({ $0.isPinned }).count == 3 {
+                        return
+                    }
+                    
+                    newFriends[index].isPinned.toggle()
+                    friendsPublisher.send(newFriends)
+                }
             }
             .store(in: &cancellables)
     }
@@ -113,14 +124,14 @@ private extension ViewModel {
     
     func generateFriends(_ type: LocationType) -> [Frined] {
         
-        let users: [Frined]
+        let friends: [Frined]
         let delta: Double
         
         switch type {
             
         case .new(let userLocation):
             delta = 0.5
-            users = names.map { name in
+            friends = names.map { name in
                 Frined(
                     id: UUID(),
                     name: name,
@@ -128,21 +139,22 @@ private extension ViewModel {
                 )
             }
             
-        case .fromOldData(let oldUsers):
-            delta = 0.01
-            users = oldUsers.map { oldUser in
+        case .fromOldData(let oldFriends):
+            delta = 0.001
+            friends = oldFriends.map { oldFriend in
                 Frined(
-                    id: oldUser.id,
-                    name: oldUser.name,
+                    id: oldFriend.id,
+                    name: oldFriend.name,
                     location: generateRandomLocationRelativeTo(
-                        oldUser.location,
+                        oldFriend.location,
                         withDelta: delta
-                    )
+                    ),
+                    isPinned: oldFriend.isPinned
                 )
             }
         }
         
-        return users
+        return friends
     }
     
     func generateRandomLocationRelativeTo(_ location: CLLocation, withDelta delta: Double) -> CLLocation {
@@ -163,13 +175,13 @@ private extension ViewModel {
     }
     
     func processFriendsData(_ friends: [Frined]) -> [ProcessedFriendData] {
-        let pinnedUsers = friends.filter { $0.isPinned }
+        let pinnedFriends = friends.filter { $0.isPinned }
         let processedData: [ProcessedFriendData]
         
-        if pinnedUsers.count == 1, let singlePinnedFriend = pinnedUsers.first {
+        if pinnedFriends.count == 1, let singlePinnedFriend = pinnedFriends.first {
             processedData = friends.map { friend in
                 let distance = self.calculateDistance(from: singlePinnedFriend.location, to: friend.location)
-                let formattedValue = String(format: "%.2f", distance) // "3.14"
+                let formattedValue = String(format: "%.2f", distance)
                 return ProcessedFriendData(
                     id: friend.id,
                     name: friend.name,
@@ -181,7 +193,7 @@ private extension ViewModel {
         } else {
             processedData = friends.map { friend in
                 let distance = self.calculateDistance(from: self.userLocation, to: friend.location)
-                let formattedValue = String(format: "%.2f", distance) // "3.14"
+                let formattedValue = String(format: "%.2f", distance)
                 return ProcessedFriendData(
                     id: friend.id,
                     name: friend.name,
