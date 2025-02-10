@@ -55,6 +55,7 @@ final class FriendCell: UITableViewCell {
     func configureWith(friendData: ProcessedFriendData) {
         nameLabel.text = friendData.name
         infoLabel.text = friendData.message
+        configureSelected(friendData.isPinned)
     }
     
     func configureSelected(_ bool: Bool) {
@@ -108,7 +109,5 @@ final class FriendCell: UITableViewCell {
             infoLabel.leadingAnchor.constraint(equalTo: friendImageView.trailingAnchor, constant: 16),
             infoLabel.trailingAnchor.constraint(equalTo: pinImageView.leadingAnchor, constant: -16),
         ])
-        
-        pinImageView.setContentHuggingPriority(.defaultHigh, for: .horizontal)
     }
 }

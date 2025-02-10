@@ -44,6 +44,7 @@ final class ViewController: UIViewController {
     private lazy var pinnedFriendsTableView: UITableView = {
         let tableView = SelfSizingTableView()
         tableView.register(FriendCell.self, forCellReuseIdentifier: FriendCell.identifier)
+        tableView.delegate = self
         return tableView
     }()
     private lazy var allFriendsTableView: UITableView = {
@@ -65,7 +66,7 @@ final class ViewController: UIViewController {
             let cell = pinnedFriendsTableView.dequeueReusableCell(withIdentifier: FriendCell.identifier, for: indexPath)
                 as? FriendCell
         else { return UITableViewCell() }
-        
+        cell.selectionStyle = .none
         cell.configureWith(friendData: itemIdentifier)
         
         return cell
@@ -80,7 +81,6 @@ final class ViewController: UIViewController {
         
         cell.selectionStyle = .none
         cell.configureWith(friendData: itemIdentifier)
-        cell.configureSelected(itemIdentifier.isPinned)
         
         return cell
     }
@@ -197,7 +197,7 @@ private extension ViewController {
         pinnedFriendsTableView.isHidden = true
         pinnedFriendsTableView.layer.cornerRadius = 20
         pinnedFriendsTableView.separatorStyle = .none
-        pinnedFriendsTableView.allowsSelection = false
+        pinnedFriendsTableView.allowsSelection = true
         pinnedFriendsTableView.isScrollEnabled = false
         pinnedFriendsTableView.backgroundColor = .clear
         pinnedFriendsTableView.rowHeight = 100
@@ -251,13 +251,10 @@ private extension ViewController {
 extension ViewController: UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        guard let id = allFriendsDataSource.itemIdentifier(for: indexPath)?.id else { return }
-        
-        selectedFriendPublisher.send(id)
-    }
-    
-    func tableView(_ tableView: UITableView, didDeselectRowAt indexPath: IndexPath) {
-        guard let id = allFriendsDataSource.itemIdentifier(for: indexPath)?.id else { return }
+        let dataSource = tableView == allFriendsTableView
+        ? allFriendsDataSource
+        : pinnedFriendsDataSource
+        guard let id = dataSource.itemIdentifier(for: indexPath)?.id else { return }
         
         selectedFriendPublisher.send(id)
     }
