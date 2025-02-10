@@ -94,7 +94,6 @@ final class FriendCell: UITableViewCell {
             friendImageView.heightAnchor.constraint(equalToConstant: friendImageSize),
             friendImageView.widthAnchor.constraint(equalToConstant: friendImageSize),
             
-            
             pinImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             pinImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             pinImageView.heightAnchor.constraint(equalToConstant: pinImageSize),
