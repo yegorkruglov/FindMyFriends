@@ -12,7 +12,7 @@ import CoreLocation
 class ViewModel {
     
     struct Input {
-        let selectedFriendPublisher: AnyPublisher<UUID?, Never>
+        let selectedFriendPublisher: AnyPublisher<UUID, Never>
     }
     
     struct Output {
@@ -91,21 +91,19 @@ private extension ViewModel {
             .store(in: &cancellables)
     }
     
-    func handleSelectedFriendPublisher(_ publisher: AnyPublisher<UUID?, Never>) {
+    func handleSelectedFriendPublisher(_ publisher: AnyPublisher<UUID, Never>) {
         publisher
             .sink { [weak self] id in
                 guard let self else { return }
                 
-                if let index = friendsPublisher.value.firstIndex(where: { $0.id == id }) {
-                    var newFriends = friendsPublisher.value
-                    
-                    if !newFriends[index].isPinned && newFriends.filter({ $0.isPinned }).count == 3 {
-                        return
-                    }
-                    
-                    newFriends[index].isPinned.toggle()
-                    friendsPublisher.send(newFriends)
-                }
+                var newFriends = friendsPublisher.value
+                
+                guard let index = newFriends.firstIndex(where: { $0.id == id }) else { return }
+                
+                guard newFriends[index].isPinned || newFriends.filter(\.isPinned).count < 3 else { return }
+                
+                newFriends[index].isPinned.toggle()
+                friendsPublisher.send(newFriends)
             }
             .store(in: &cancellables)
     }

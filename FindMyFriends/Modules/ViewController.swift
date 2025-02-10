@@ -17,7 +17,7 @@ final class ViewController: UIViewController {
     // MARK: - publishers
     
     private var cancellables: Set<AnyCancellable> = []
-    private var selectedFriendPublisher = PassthroughSubject<UUID?, Never>()
+    private var selectedFriendPublisher = PassthroughSubject<UUID, Never>()
     
     // MARK: - ui
     
