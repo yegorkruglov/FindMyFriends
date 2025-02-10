@@ -16,7 +16,11 @@ final class AppCoordinator: AppCoordinatorProtocol {
     
     private let window: UIWindow
     private let locationManager = CLLocationManager()
-    private let navigationController: UINavigationController = UINavigationController()
+    private lazy var navigationController: UINavigationController = {
+        let navController = UINavigationController()
+        navController.setNavigationBarHidden(true, animated: false)
+        return navController
+    }()
     
     init(window: UIWindow) {
         self.window = window
@@ -41,8 +45,8 @@ final class AppCoordinator: AppCoordinatorProtocol {
     }
     
     func navigateToFrinedsList() {
-        let vm = ViewModel()
-        let vc = ViewController(viewModel: vm)
+        let vm = FriendsListViewModel()
+        let vc = FriendsListViewController(viewModel: vm)
         navigationController.setViewControllers([vc], animated: true)
     }
 }

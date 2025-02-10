@@ -1,5 +1,5 @@
 //
-//  ViewModel.swift
+//  FriendsListViewModel.swift
 //  FindMyFriends
 //
 //  Created by Egor Kruglov on 06.02.2025.
@@ -9,7 +9,7 @@ import Foundation
 import Combine
 import CoreLocation
 
-class ViewModel {
+class FriendsListViewModel: NSObject {
     
     struct Input {
         let selectedFriendPublisher: AnyPublisher<UUID, Never>
@@ -51,12 +51,13 @@ class ViewModel {
         "Abigail White"
     ]
     
-    private let userLocation: CLLocation = CLLocation(latitude: 30, longitude: 60)
-    private var selectedFriendLocation: CLLocation?
+    private var userLocation: CLLocation = CLLocation(latitude: 30, longitude: 60)
+    private let locationManager: CLLocationManager = CLLocationManager()
     
     // MARK: -  public methods
     
-    func bind(_ input: ViewModel.Input) -> ViewModel.Output {
+    func bind(_ input: FriendsListViewModel.Input) -> FriendsListViewModel.Output {
+        configureLocationManager()
         viewDidLoad()
         
         handleFriendsPublisher()
@@ -70,7 +71,13 @@ class ViewModel {
 }
 
 // MARK: -  private methods
-private extension ViewModel {
+private extension FriendsListViewModel {
+    func configureLocationManager() {
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        locationManager.startUpdatingLocation()
+    }
+    
     func viewDidLoad() {
         
         let friends = generateFriends(.new(userLocation: userLocation))
@@ -205,6 +212,15 @@ private extension ViewModel {
             }
         }
         return processedData
+    }
+}
+
+// MARK: - CLLocationManagerDelegate
+
+extension FriendsListViewModel: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let lastLocation = locations.last else { return }
+        userLocation = lastLocation
     }
 }
 

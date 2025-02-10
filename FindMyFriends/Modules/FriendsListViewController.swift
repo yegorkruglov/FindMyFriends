@@ -1,5 +1,5 @@
 //
-//  ViewController.swift
+//  FriendsListViewController.swift
 //  FindMyFriends
 //
 //  Created by Egor Kruglov on 06.02.2025.
@@ -8,11 +8,11 @@
 import UIKit
 import Combine
 
-final class ViewController: UIViewController {
+final class FriendsListViewController: UIViewController {
     
     // MARK: - external depandecies
     
-    private let viewModel: ViewModel
+    private let viewModel: FriendsListViewModel
     
     // MARK: - publishers
     
@@ -87,7 +87,7 @@ final class ViewController: UIViewController {
     
     // MARK: -  initializers
     
-    init(viewModel: ViewModel) {
+    init(viewModel: FriendsListViewModel) {
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
@@ -108,7 +108,7 @@ final class ViewController: UIViewController {
 
 // MARK: -  private methods
 
-private extension ViewController {
+private extension FriendsListViewController {
     
     func setup() {
         addSubviews()
@@ -164,14 +164,14 @@ private extension ViewController {
             activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor),
             
             allFriendsTableView.topAnchor.constraint(equalTo: pinnedView.bottomAnchor),
-            allFriendsTableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            allFriendsTableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             allFriendsTableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
             allFriendsTableView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
         ])
     }
     
     func bind() {
-        let input = ViewModel.Input(
+        let input = FriendsListViewModel.Input(
             selectedFriendPublisher: selectedFriendPublisher.eraseToAnyPublisher()
         )
         
@@ -248,7 +248,7 @@ private extension ViewController {
 
 // MARK: - UITableViewDelegate
 
-extension ViewController: UITableViewDelegate {
+extension FriendsListViewController: UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let dataSource = tableView == allFriendsTableView
