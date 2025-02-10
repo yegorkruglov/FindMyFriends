@@ -182,24 +182,27 @@ private extension ViewModel {
             processedData = friends.map { friend in
                 let distance = self.calculateDistance(from: singlePinnedFriend.location, to: friend.location)
                 let formattedValue = String(format: "%.2f", distance)
+                let message = "\(formattedValue) meters away from \(singlePinnedFriend.name)"
+                let altMessage = "Showing distance from this person to others"
                 return ProcessedFriendData(
                     id: friend.id,
                     name: friend.name,
                     distance: friend == singlePinnedFriend ? 0 : distance,
                     isPinned: friend.isPinned,
-                    message: friend == singlePinnedFriend ? "" : "\(formattedValue) meters away from \(singlePinnedFriend.name)"
+                    message: friend == singlePinnedFriend ? altMessage : message
                 )
             }
         } else {
             processedData = friends.map { friend in
                 let distance = self.calculateDistance(from: self.userLocation, to: friend.location)
                 let formattedValue = String(format: "%.2f", distance)
+                let message = "\(formattedValue) meters from you"
                 return ProcessedFriendData(
                     id: friend.id,
                     name: friend.name,
                     distance: distance,
                     isPinned: friend.isPinned,
-                    message: "\(formattedValue) meters from you"
+                    message: message
                 )
             }
         }

@@ -31,6 +31,7 @@ final class FriendCell: UITableViewCell {
         let label = UILabel()
         label.font = .preferredFont(forTextStyle: .caption1)
         label.text = "Distance from you: unknown"
+        label.numberOfLines = 0
         return label
     }()
     private lazy var pinImageView: UIImageView = {
